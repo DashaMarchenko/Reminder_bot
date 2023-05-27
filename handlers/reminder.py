@@ -48,6 +48,7 @@ async def send_question(callback_query: CallbackQuery, callback_data: CallbackDa
         await bot.send_message(callback_query.from_user.id, f'Введите время напоминания в формате '
                                                             f'<b>ЧЧ:ММ</b> \nНапример: <b>08:52</b>',
                                parse_mode=types.ParseMode.HTML, reply_markup=cancel_kb)
+        await state.set_state(FSMAdmin.get_date.state)
     else:
         return
 
@@ -63,7 +64,7 @@ async def get_info(message: types.Message, state: FSMContext):
             all_date = f'{message.text} - {date}'
 
             now_date = datetime.now()
-            user_date = datetime.strptime(f'{all_date}', '%H:%M - %%d.%m.%Y')
+            user_date = datetime.strptime(f'{all_date}', '%H:%M - %d.%m.%Y')
 
             if now_date >= user_date:
                 await message.answer('Ошибка ввода. Введенная дата уже прошла', reply_markup=start_kb)
