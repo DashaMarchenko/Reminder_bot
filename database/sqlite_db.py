@@ -8,7 +8,7 @@ from typing import Union, NamedTuple
 
 from config import load_config
 
-config = load_config(r'C:\Users\HP\PycharmProjects\reminder_bot\config\config.ini')
+config = load_config(r'Z:\Pt9_01\DashaMarchenko\RemainderBot\config\config.ini')
 
 
 class Remind(NamedTuple):
@@ -22,6 +22,27 @@ class SQLiteDB:
         self.connection = sqlite3.connect(r'users.db', check_same_thread=False)
         self.cursor = self.connection.cursor()
         self._create_table_users()
+
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+
+        self.logger = self._setup_logger()
+
+    @staticmethod
+    def _setup_logger():
+        logger = logging.getLogger('bot_db_log')
+        logger.setLevel(logging.INFO)
+
+        log_file = os.path.join(os.path.abspath(os.curdir), fr'logs/bot_db_log.log')
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+
+        formatter = logging.Formatter('%(asctime)s - %(Levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+
+        logger.addHandler(file_handler)
+
+        return logger
 
     def _create_table_users(self):
         """Создает таблицу напоминаний
@@ -37,6 +58,7 @@ class SQLiteDB:
                                 "date TEXT,"
                                 "text TEXT"
                                 ")")
+            logging.info('Create table users')
 
     def insert_one_value(self, user_id: int, name: str, date: str, text: str, _id=None) -> Union[bool, int, tuple]:
         """Вставка напоминания в БД
@@ -63,7 +85,7 @@ class SQLiteDB:
                 return False, 404, value
 
         except Exception as ex:
-            logging.error(f'{repr(ex)}')
+            self.logger.error(f'{repr(ex)}')
             return False, 404, f'{repr(ex)}'
 
     def _check_duplicates(self, value: tuple) -> bool:
@@ -89,7 +111,7 @@ class SQLiteDB:
                 all_posts = self._get_formatted_json(all_data.fetchall())
                 return all_posts, 200
         except Exception as ex:
-            logging.error(f'{repr(ex)}')
+            self.logger.error(f'{repr(ex)}')
             return repr(ex), 404
 
     def _get_formatted_json(self, users: Union[list, tuple]):
@@ -123,7 +145,7 @@ class SQLiteDB:
                 self.cursor.execute('DELETE FROM users')
                 return 'Все значения удалены', 200
             except Exception as ex:
-                logging.error(f'{repr(ex)}')
+                self.logger.error(f'{repr(ex)}')
                 return repr(ex), 404
 
     def send_remind(self):
@@ -161,15 +183,15 @@ class SQLiteDB:
             for _id in all_id:
                 self.cursor.execute("DELETE FROM users WHERE id = ?", (_id,))
 
-    @staticmethod
-    def delete_db(db_file: str):
-        """Удаляет базу данных
+    def delete_db(self, db_file: str):
+        """
+        Удаляет базу данных
 
         :param db_file: путь к файлу базы данных
         :return:
         """
         if os.path.exists(db_file):
             os.remove(db_file)
-            logging.warning('The database file has been removed')
+            self.logger.warning('The database file has been removed')
         else:
-            logging.warning('Database file not exists')
+            self.logger.warning('Database file not exists')
